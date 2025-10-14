@@ -2,6 +2,7 @@ package uisrv
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,7 +38,9 @@ func Start(rootDir string) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", renderRoot)
+	mux.HandleFunc("/agents/json", renderRootJSON)
 	mux.HandleFunc("/agent", renderAgent)
+	mux.HandleFunc("/agent/json", renderAgentJSON)
 	mux.HandleFunc("/save_config", saveCustomConfigForInstance)
 	mux.HandleFunc("/rotate_client_cert", rotateInstanceClientCert)
 	mux.HandleFunc("/opamp_connection_settings", opampConnectionSettings)
@@ -76,6 +79,36 @@ func renderRoot(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "root.html", data.AllAgents.GetAllAgentsReadonlyClone())
 }
 
+func renderRootJSON(w http.ResponseWriter, r *http.Request) {
+	allAgents := data.AllAgents.GetAllAgentsReadonlyClone()
+
+	// Convert agents map to a slice of AgentJSON for cleaner JSON output
+	var agentsJSON []AgentJSON
+	for _, agent := range allAgents {
+		agentJSON := AgentJSON{
+			InstanceId:                  uuid.UUID(agent.InstanceId).String(),
+			InstanceIdStr:               agent.InstanceIdStr,
+			Status:                      agent.Status,
+			StartedAt:                   agent.StartedAt,
+			EffectiveConfig:             agent.EffectiveConfig,
+			CustomInstanceConfig:        agent.CustomInstanceConfig,
+			ClientCertSha256Fingerprint: agent.ClientCertSha256Fingerprint,
+			ClientCertOfferError:        agent.ClientCertOfferError,
+		}
+		agentsJSON = append(agentsJSON, agentJSON)
+	}
+
+	// Set Content-Type header for JSON response
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode agents to JSON and write to response
+	if err := json.NewEncoder(w).Encode(agentsJSON); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Printf("Error encoding agents to JSON: %v", err)
+		return
+	}
+}
+
 func renderAgent(w http.ResponseWriter, r *http.Request) {
 	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
 	if err != nil {
@@ -89,6 +122,54 @@ func renderAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renderTemplate(w, "agent.html", agent)
+}
+
+// AgentJSON represents the Agent data structure for JSON serialization
+type AgentJSON struct {
+	InstanceId                  string                   `json:"instanceId"`
+	InstanceIdStr               string                   `json:"instanceIdStr"`
+	Status                      *protobufs.AgentToServer `json:"status"`
+	StartedAt                   time.Time                `json:"startedAt"`
+	EffectiveConfig             string                   `json:"effectiveConfig"`
+	CustomInstanceConfig        string                   `json:"customInstanceConfig"`
+	ClientCertSha256Fingerprint string                   `json:"clientCertSha256Fingerprint"`
+	ClientCertOfferError        string                   `json:"clientCertOfferError"`
+}
+
+func renderAgentJSON(w http.ResponseWriter, r *http.Request) {
+	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	agent := data.AllAgents.GetAgentReadonlyClone(data.InstanceId(uid))
+	if agent == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Create a JSON-safe representation of the agent
+	agentJSON := AgentJSON{
+		InstanceId:                  uuid.UUID(agent.InstanceId).String(),
+		InstanceIdStr:               agent.InstanceIdStr,
+		Status:                      agent.Status,
+		StartedAt:                   agent.StartedAt,
+		EffectiveConfig:             agent.EffectiveConfig,
+		CustomInstanceConfig:        agent.CustomInstanceConfig,
+		ClientCertSha256Fingerprint: agent.ClientCertSha256Fingerprint,
+		ClientCertOfferError:        agent.ClientCertOfferError,
+	}
+
+	// Set Content-Type header for JSON response
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode agent to JSON and write to response
+	if err := json.NewEncoder(w).Encode(agentJSON); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Printf("Error encoding agent to JSON: %v", err)
+		return
+	}
 }
 
 func saveCustomConfigForInstance(w http.ResponseWriter, r *http.Request) {
