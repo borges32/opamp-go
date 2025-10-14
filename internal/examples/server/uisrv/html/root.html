@@ -11,10 +11,14 @@
 <table width=100% border="1" style="border-collapse: collapse">
     <tr>
         <th>Instance ID</th>
+        <th>Host Name</th>
+        <th>Up</th>
     </tr>
 {{ range . }}
     <tr>
         <td><a href="agent?instanceid={{ .InstanceIdStr }}">{{ .InstanceIdStr }}</a></td>
+        <td>{{ getHostName . }}</td>
+        <td>{{ .Status.Health.Healthy }}</td>
     </tr>
 {{ end }}
 </table>

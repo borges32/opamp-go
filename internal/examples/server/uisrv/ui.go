@@ -42,6 +42,7 @@ func Start(rootDir string) {
 	mux.HandleFunc("/agent", renderAgent)
 	mux.HandleFunc("/agent/json", renderAgentJSON)
 	mux.HandleFunc("/save_config", saveCustomConfigForInstance)
+	mux.HandleFunc("/save_config/json", saveCustomConfigForInstanceJSON)
 	mux.HandleFunc("/rotate_client_cert", rotateInstanceClientCert)
 	mux.HandleFunc("/opamp_connection_settings", opampConnectionSettings)
 	srv = &http.Server{
@@ -55,8 +56,29 @@ func Shutdown() {
 	srv.Shutdown(context.Background())
 }
 
+// getHostNameFromAgent extracts the "host.name" attribute value from an agent
+func getHostNameFromAgent(agent *data.Agent) string {
+	if agent == nil || agent.Status == nil || agent.Status.AgentDescription == nil {
+		return "N/A"
+	}
+
+	for _, attr := range agent.Status.AgentDescription.NonIdentifyingAttributes {
+		if attr.Key == "host.name" && attr.Value != nil && attr.Value.Value != nil {
+			if stringVal, ok := attr.Value.Value.(*protobufs.AnyValue_StringValue); ok {
+				return stringVal.StringValue
+			}
+		}
+	}
+	return "N/A"
+}
+
 func renderTemplate(w http.ResponseWriter, htmlTemplateFile string, data interface{}) {
-	t, err := template.ParseFiles(
+	// Create template with custom functions
+	t := template.New(htmlTemplateFile).Funcs(template.FuncMap{
+		"getHostName": getHostNameFromAgent,
+	})
+
+	t, err := t.ParseFiles(
 		path.Join(htmlDir, "header.html"),
 		path.Join(htmlDir, htmlTemplateFile),
 	)
@@ -136,6 +158,14 @@ type AgentJSON struct {
 	ClientCertOfferError        string                   `json:"clientCertOfferError"`
 }
 
+// ConfigUpdateResponse represents the response for config update operations
+type ConfigUpdateResponse struct {
+	Success     bool   `json:"success"`
+	Message     string `json:"message"`
+	InstanceId  string `json:"instanceId"`
+	StatusReady bool   `json:"statusReady"`
+}
+
 func renderAgentJSON(w http.ResponseWriter, r *http.Request) {
 	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
 	if err != nil {
@@ -211,6 +241,94 @@ func saveCustomConfigForInstance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/agent?instanceid="+uid.String(), http.StatusSeeOther)
+}
+
+func saveCustomConfigForInstanceJSON(w http.ResponseWriter, r *http.Request) {
+	// Set Content-Type header for JSON response
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := r.ParseForm(); err != nil {
+		response := ConfigUpdateResponse{
+			Success: false,
+			Message: "Error parsing form: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	uid, err := uuid.Parse(r.Form.Get("instanceid"))
+	if err != nil {
+		response := ConfigUpdateResponse{
+			Success: false,
+			Message: "Invalid instance ID: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	instanceId := data.InstanceId(uid)
+	agent := data.AllAgents.GetAgentReadonlyClone(instanceId)
+	if agent == nil {
+		response := ConfigUpdateResponse{
+			Success:    false,
+			Message:    "Agent not found",
+			InstanceId: uid.String(),
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	configStr := r.PostForm.Get("config")
+	if configStr == "" {
+		response := ConfigUpdateResponse{
+			Success:    false,
+			Message:    "Configuration cannot be empty",
+			InstanceId: uid.String(),
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	config := &protobufs.AgentConfigMap{
+		ConfigMap: map[string]*protobufs.AgentConfigFile{
+			"": {Body: []byte(configStr)},
+		},
+	}
+
+	notifyNextStatusUpdate := make(chan struct{}, 1)
+	data.AllAgents.SetCustomConfigForAgent(instanceId, config, notifyNextStatusUpdate)
+
+	// Wait for up to 5 seconds for a Status update, which is expected
+	// to be reported by the Agent after we set the remote config.
+	timer := time.NewTicker(time.Second * 5)
+
+	var statusReady bool
+	select {
+	case <-notifyNextStatusUpdate:
+		statusReady = true
+	case <-timer.C:
+		statusReady = false
+	}
+
+	response := ConfigUpdateResponse{
+		Success:     true,
+		Message:     "Custom configuration updated successfully",
+		InstanceId:  uid.String(),
+		StatusReady: statusReady,
+	}
+
+	if !statusReady {
+		response.Message += " (timeout waiting for agent confirmation)"
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Printf("Error encoding JSON response: %v", err)
+	}
 }
 
 func rotateInstanceClientCert(w http.ResponseWriter, r *http.Request) {
