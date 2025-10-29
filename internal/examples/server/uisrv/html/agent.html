@@ -1,6 +1,12 @@
 {{ template "header.html" . }}
 
-<a href="/">Back to Agents List</a>
+<!-- Back Button -->
+<div style="margin-bottom: 24px;">
+    <a href="/" class="inline-flex items-center px-4 py-2 bg-white text-slate-700 font-medium rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Back to Agents List
+    </a>
+</div>
 
 <style>
     td {
@@ -71,13 +77,19 @@
             Additional Configuration:<br/>
             <form action="/save_config" method="post">
             <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
-            <textarea cols="40" rows="20" name="config">{{ .CustomInstanceConfig }}</textarea><br/>
+            <textarea cols="40" rows="20" name="config" class="border border-slate-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">{{ .CustomInstanceConfig }}</textarea><br/>
              {{if .Status.RemoteConfigStatus }}
                 {{if .Status.RemoteConfigStatus.ErrorMessage }}
-                <span style="color:red">Failed: {{ .Status.RemoteConfigStatus.ErrorMessage }}</span><br/>
+                <span style="color:red; display: inline-flex; align-items: center; margin-top: 8px; padding: 8px 12px; background-color: #fee; border-radius: 6px; font-size: 14px;">
+                    <i class="fas fa-exclamation-circle" style="margin-right: 6px;"></i>
+                    Failed: {{ .Status.RemoteConfigStatus.ErrorMessage }}
+                </span><br/>
                 {{end}}
              {{end}}
-            <input type="submit" value="Save and Send to Agent"/>
+            <button type="submit" class="mt-4 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95">
+                <i class="fas fa-save mr-2"></i>
+                Save and Send to Agent
+            </button>
             </form>
         </td>
     </tr>
@@ -115,12 +127,18 @@
 {{end}}
 
 <br/>
-<form action="/rotate_client_cert" method="post">
+<form action="/rotate_client_cert" method="post" style="margin-top: 16px;">
     <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
     {{if .ClientCert}}
-    <input type="submit" value="Rotate Client Certificate"/>
+    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg shadow-md hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Rotate Client Certificate
+    </button>
     {{else}}
-    <input type="submit" value="Accept and Offer Client Certificate"/>
+    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg shadow-md hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+        <i class="fas fa-certificate mr-2"></i>
+        Accept and Offer Client Certificate
+    </button>
     {{end}}
 </form>
 
@@ -128,21 +146,40 @@
 
 <br/>
 
-<form action="/opamp_connection_settings" method="post">
+<form action="/opamp_connection_settings" method="post" style="padding: 20px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
     <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
-    <input type="radio" name="tls_min" value="TLSv1.0">
-      <label for="TLSv1.0">TLSv1.0</label><br/>
-    <input type="radio" name="tls_min" value="TLSv1.1">
-      <label for="TLSv1.1">TLSv1.1</label><br/>
-    <input type="radio" name="tls_min" value="TLSv1.2">
-      <label for="TLSv1.2">TLSv1.2</label><br/>
-    <input type="radio" name="tls_min" value="TLSv1.3">
-      <label for="TLSv1.3">TLSv1.3</label><br/>
+    
+    <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; color: #475569; margin-bottom: 8px;">TLS Minimum Version:</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                <input type="radio" name="tls_min" value="TLSv1.0" style="margin-right: 8px; width: 16px; height: 16px;">
+                <span style="color: #334155;">TLSv1.0</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                <input type="radio" name="tls_min" value="TLSv1.1" style="margin-right: 8px; width: 16px; height: 16px;">
+                <span style="color: #334155;">TLSv1.1</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                <input type="radio" name="tls_min" value="TLSv1.2" style="margin-right: 8px; width: 16px; height: 16px;">
+                <span style="color: #334155;">TLSv1.2</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
+                <input type="radio" name="tls_min" value="TLSv1.3" style="margin-right: 8px; width: 16px; height: 16px;">
+                <span style="color: #334155;">TLSv1.3</span>
+            </label>
+        </div>
+    </div>
 
-    <label for="proxy_url">Proxy URL:</label>
-      <input type="text" id="proxy_url" name="proxy_url"><br/>
+    <div style="margin-bottom: 16px;">
+        <label for="proxy_url" style="display: block; font-weight: 600; color: #475569; margin-bottom: 8px;">Proxy URL:</label>
+        <input type="text" id="proxy_url" name="proxy_url" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'"/>
+    </div>
 
-    <input type="submit" value="Set connection settings"/>
+    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+        <i class="fas fa-cog mr-2"></i>
+        Set Connection Settings
+    </button>
 </form>
 
 </body>
