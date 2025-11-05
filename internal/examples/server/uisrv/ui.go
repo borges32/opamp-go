@@ -41,6 +41,7 @@ func Start(rootDir string) {
 	mux.HandleFunc("/agents/json", renderRootJSON)
 	mux.HandleFunc("/agent", renderAgent)
 	mux.HandleFunc("/agent/json", renderAgentJSON)
+	mux.HandleFunc("/components", renderComponents)
 	mux.HandleFunc("/save_config", saveCustomConfigForInstance)
 	mux.HandleFunc("/save_config/json", saveCustomConfigForInstanceJSON)
 	mux.HandleFunc("/rotate_client_cert", rotateInstanceClientCert)
@@ -72,10 +73,27 @@ func getHostNameFromAgent(agent *data.Agent) string {
 	return "N/A"
 }
 
+// getOSTypeFromAgent extracts the "os.type" attribute value from an agent
+func getOSTypeFromAgent(agent *data.Agent) string {
+	if agent == nil || agent.Status == nil || agent.Status.AgentDescription == nil {
+		return "unknown"
+	}
+
+	for _, attr := range agent.Status.AgentDescription.NonIdentifyingAttributes {
+		if attr.Key == "os.type" && attr.Value != nil && attr.Value.Value != nil {
+			if stringVal, ok := attr.Value.Value.(*protobufs.AnyValue_StringValue); ok {
+				return stringVal.StringValue
+			}
+		}
+	}
+	return "unknown"
+}
+
 func renderTemplate(w http.ResponseWriter, htmlTemplateFile string, data interface{}) {
 	// Create template with custom functions
 	t := template.New(htmlTemplateFile).Funcs(template.FuncMap{
 		"getHostName": getHostNameFromAgent,
+		"getOSType":   getOSTypeFromAgent,
 	})
 
 	t, err := t.ParseFiles(
@@ -144,6 +162,21 @@ func renderAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	renderTemplate(w, "agent.html", agent)
+}
+
+func renderComponents(w http.ResponseWriter, r *http.Request) {
+	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	agent := data.AllAgents.GetAgentReadonlyClone(data.InstanceId(uid))
+	if agent == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	renderTemplate(w, "components.html", agent)
 }
 
 // AgentJSON represents the Agent data structure for JSON serialization

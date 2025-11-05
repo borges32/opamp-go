@@ -4,9 +4,9 @@
 <main x-data="agentManager()" x-init="init()" class="space-y-6">
     
     <!-- Stats Card -->
-    <div class="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-md">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <!-- Total Agents -->
-        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl">
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-slate-500 text-sm font-medium">Connected Agents</p>
@@ -18,40 +18,145 @@
                 </div>
             </div>
         </div>
+
+        <!-- Windows Agents -->
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Windows</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="windowsAgents"></p>
+                    <p class="text-slate-400 text-xs mt-1">OS: Windows</p>
+                </div>
+                <div class="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-lg shadow-lg">
+                    <i class="fab fa-windows text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Linux Agents -->
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Linux</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="linuxAgents"></p>
+                    <p class="text-slate-400 text-xs mt-1">OS: Linux</p>
+                </div>
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 rounded-lg shadow-lg">
+                    <i class="fab fa-linux text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Healthy Agents -->
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Healthy</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2" x-text="healthyAgents"></p>
+                    <p class="text-slate-400 text-xs mt-1">Status: OK</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unhealthy Agents -->
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Unhealthy</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2" x-text="unhealthyAgents"></p>
+                    <p class="text-slate-400 text-xs mt-1">Status: Error</p>
+                </div>
+                <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-times-circle text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Filters and Search -->
     <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <!-- Search Bar -->
-            <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-slate-400"></i>
+        <div class="flex flex-col gap-4">
+            <!-- First Row: Search Bar -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-slate-400"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            x-model="searchQuery"
+                            @input="filterAgents()"
+                            placeholder="Search by hostname or instance ID..."
+                            class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700"
+                        >
                     </div>
-                    <input 
-                        type="text" 
-                        x-model="searchQuery"
-                        @input="filterAgents()"
-                        placeholder="Search by hostname or instance ID..."
-                        class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700"
+                </div>
+                
+                <!-- Items per page -->
+                <div class="flex items-center space-x-4">
+                    <label class="text-slate-600 font-medium">Show:</label>
+                    <select 
+                        x-model="itemsPerPage"
+                        @change="changeItemsPerPage()"
+                        class="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700 bg-white"
                     >
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
                 </div>
             </div>
-            
-            <!-- Items per page -->
-            <div class="flex items-center space-x-4">
-                <label class="text-slate-600 font-medium">Show:</label>
-                <select 
-                    x-model="itemsPerPage"
-                    @change="changeItemsPerPage()"
-                    class="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700 bg-white"
+
+            <!-- Second Row: Filters -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- OS Filter -->
+                <div class="flex items-center space-x-2">
+                    <label class="text-slate-600 font-medium">
+                        <i class="fas fa-desktop mr-1"></i>
+                        OS:
+                    </label>
+                    <select 
+                        x-model="osFilter"
+                        @change="filterAgents()"
+                        class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700 bg-white"
+                    >
+                        <option value="all">All OS</option>
+                        <option value="windows">Windows</option>
+                        <option value="linux">Linux</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="flex items-center space-x-2">
+                    <label class="text-slate-600 font-medium">
+                        <i class="fas fa-heartbeat mr-1"></i>
+                        Status:
+                    </label>
+                    <select 
+                        x-model="statusFilter"
+                        @change="filterAgents()"
+                        class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-slate-700 bg-white"
+                    >
+                        <option value="all">All Status</option>
+                        <option value="healthy">Healthy</option>
+                        <option value="unhealthy">Unhealthy</option>
+                    </select>
+                </div>
+
+                <!-- Clear Filters Button -->
+                <button 
+                    @click="clearFilters()"
+                    class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
                 >
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
+                    <i class="fas fa-times-circle mr-2"></i>
+                    Clear Filters
+                </button>
             </div>
         </div>
         
@@ -83,8 +188,20 @@
                         </th>
                         <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             <div class="flex items-center justify-center space-x-2">
+                                <i class="fas fa-desktop"></i>
+                                <span>OS</span>
+                            </div>
+                        </th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            <div class="flex items-center justify-center space-x-2">
                                 <i class="fas fa-heartbeat"></i>
                                 <span>Status</span>
+                            </div>
+                        </th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            <div class="flex items-center justify-center space-x-2">
+                                <i class="fas fa-tools"></i>
+                                <span>Actions</span>
                             </div>
                         </th>
                     </tr>
@@ -114,6 +231,29 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
+                                <!-- Windows -->
+                                <template x-if="agent.os && agent.os.toLowerCase() === 'windows'">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                                        <i class="fab fa-windows mr-2"></i>
+                                        Windows
+                                    </span>
+                                </template>
+                                <!-- Linux -->
+                                <template x-if="agent.os && agent.os.toLowerCase() === 'linux'">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                        <i class="fab fa-linux mr-2"></i>
+                                        Linux
+                                    </span>
+                                </template>
+                                <!-- Unknown -->
+                                <template x-if="!agent.os || (agent.os.toLowerCase() !== 'windows' && agent.os.toLowerCase() !== 'linux')">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                        <i class="fas fa-question-circle mr-2"></i>
+                                        Unknown
+                                    </span>
+                                </template>
+                            </td>
+                            <td class="px-6 py-4 text-center">
                                 <template x-if="agent.healthy">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
                                         <i class="fas fa-check-circle mr-2"></i>
@@ -127,13 +267,31 @@
                                     </span>
                                 </template>
                             </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <a :href="'agent?instanceid=' + agent.instanceId" 
+                                       target="_self"
+                                       class="inline-flex items-center px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+                                       title="View agent configuration">
+                                        <i class="fas fa-cog mr-2"></i>
+                                        Config
+                                    </a>
+                                    <a :href="'components?instanceid=' + agent.instanceId" 
+                                       target="_self"
+                                       class="inline-flex items-center px-3 py-1.5 bg-purple-500 text-white text-sm font-medium rounded-lg hover:bg-purple-600 transition-colors shadow-sm"
+                                       title="View component health">
+                                        <i class="fas fa-heartbeat mr-2"></i>
+                                        Health
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     </template>
                     
                     <!-- Empty State -->
                     <template x-if="paginatedAgents.length === 0">
                         <tr>
-                            <td colspan="3" class="px-6 py-12 text-center">
+                            <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="flex flex-col items-center justify-center space-y-4">
                                     <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                                         <i class="fas fa-inbox text-slate-400 text-2xl"></i>
@@ -203,7 +361,8 @@
         {
             instanceId: '{{ .InstanceIdStr }}',
             hostname: '{{ getHostName . }}',
-            healthy: {{ .Status.Health.Healthy }}
+            healthy: {{ .Status.Health.Healthy }},
+            os: '{{ getOSType . }}'
         }{{ end }}
     ];
     
@@ -218,6 +377,8 @@
             filteredAgents: [],
             paginatedAgents: [],
             searchQuery: '',
+            osFilter: 'all',
+            statusFilter: 'all',
             itemsPerPage: 25,
             currentPage: 1,
             
@@ -230,6 +391,22 @@
             
             get totalAgents() {
                 return this.agents.length;
+            },
+            
+            get windowsAgents() {
+                return this.agents.filter(a => a.os && a.os.toLowerCase() === 'windows').length;
+            },
+            
+            get linuxAgents() {
+                return this.agents.filter(a => a.os && a.os.toLowerCase() === 'linux').length;
+            },
+            
+            get healthyAgents() {
+                return this.agents.filter(a => a.healthy === true).length;
+            },
+            
+            get unhealthyAgents() {
+                return this.agents.filter(a => a.healthy === false).length;
             },
             
             get totalPages() {
@@ -285,12 +462,39 @@
                     );
                 }
                 
+                // Apply OS filter
+                if (this.osFilter !== 'all') {
+                    filtered = filtered.filter(agent => {
+                        const os = (agent.os || 'unknown').toLowerCase();
+                        return os === this.osFilter.toLowerCase();
+                    });
+                }
+                
+                // Apply Status filter
+                if (this.statusFilter !== 'all') {
+                    filtered = filtered.filter(agent => {
+                        if (this.statusFilter === 'healthy') {
+                            return agent.healthy === true;
+                        } else if (this.statusFilter === 'unhealthy') {
+                            return agent.healthy === false;
+                        }
+                        return true;
+                    });
+                }
+                
                 this.filteredAgents = filtered;
                 this.currentPage = 1;
                 this.updatePagination();
                 
                 console.log('Filtered agents:', this.filteredAgents.length);
                 console.log('Paginated agents:', this.paginatedAgents.length);
+            },
+            
+            clearFilters() {
+                this.searchQuery = '';
+                this.osFilter = 'all';
+                this.statusFilter = 'all';
+                this.filterAgents();
             },
             
             updatePagination() {

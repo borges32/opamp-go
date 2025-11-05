@@ -1,0 +1,384 @@
+{{ template "header.html" . }}
+
+<!-- Back Button -->
+<div class="mb-6">
+    <a href="/" class="inline-flex items-center px-4 py-2 bg-white text-slate-700 font-medium rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Back to Agents List
+    </a>
+</div>
+
+<!-- Main Content -->
+<main x-data="componentsManager()" x-init="init()" class="space-y-6">
+    
+    <!-- Agent Info Card -->
+    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">Component Health Details</h2>
+                <p class="text-slate-500 mt-1">Agent: <span class="font-mono text-sm" x-text="agentInstanceId"></span></p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p class="text-slate-500 text-sm">Overall Status</p>
+                    <template x-if="overallHealthy">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200 mt-1">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Healthy
+                        </span>
+                    </template>
+                    <template x-if="!overallHealthy">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200 mt-1">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Unhealthy
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Processors</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="stats.processors"></p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-microchip text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Extensions</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="stats.extensions"></p>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-puzzle-piece text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Pipelines</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="stats.pipelines"></p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-sitemap text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Exporters</p>
+                    <p class="text-3xl font-bold text-slate-800 mt-2" x-text="stats.exporters"></p>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-lg shadow-lg">
+                    <i class="fas fa-upload text-white text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="bg-white rounded-xl shadow-md p-4 border border-slate-200">
+        <div class="flex flex-wrap gap-2">
+            <button @click="activeTab = 'all'" 
+                    :class="activeTab === 'all' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-th mr-2"></i>
+                All Components (<span x-text="allComponents.length"></span>)
+            </button>
+            <button @click="activeTab = 'processors'" 
+                    :class="activeTab === 'processors' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-microchip mr-2"></i>
+                Processors (<span x-text="stats.processors"></span>)
+            </button>
+            <button @click="activeTab = 'extensions'" 
+                    :class="activeTab === 'extensions' ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-puzzle-piece mr-2"></i>
+                Extensions (<span x-text="stats.extensions"></span>)
+            </button>
+            <button @click="activeTab = 'pipelines'" 
+                    :class="activeTab === 'pipelines' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-sitemap mr-2"></i>
+                Pipelines (<span x-text="stats.pipelines"></span>)
+            </button>
+            <button @click="activeTab = 'exporters'" 
+                    :class="activeTab === 'exporters' ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-upload mr-2"></i>
+                Exporters (<span x-text="stats.exporters"></span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Components Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <template x-for="component in filteredComponents" :key="component.name">
+            <div class="bg-white rounded-xl shadow-md border border-slate-200 hover:shadow-xl transition-shadow overflow-hidden">
+                <!-- Component Header -->
+                <div class="p-6 border-b border-slate-200" :class="getHeaderColor(component.type)">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <div class="p-2 rounded-lg" :class="getIconBg(component.type)">
+                                    <i :class="getIcon(component.type)" class="text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800" x-text="component.name"></h3>
+                                    <p class="text-sm text-slate-500" x-text="component.type"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <template x-if="component.healthy">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Healthy
+                            </span>
+                        </template>
+                        <template x-if="!component.healthy">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                <i class="fas fa-times-circle mr-1"></i>
+                                Unhealthy
+                            </span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Component Details -->
+                <div class="p-6 space-y-4">
+                    <!-- Status -->
+                    <template x-if="component.status">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-600 mb-1">Status:</p>
+                            <p class="text-sm text-slate-800 font-mono bg-slate-50 p-2 rounded" x-text="component.status"></p>
+                        </div>
+                    </template>
+
+                    <!-- Start Time -->
+                    <template x-if="component.startTime">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-600 mb-1">Running since:</p>
+                            <p class="text-sm text-slate-800" x-text="formatDate(component.startTime)"></p>
+                        </div>
+                    </template>
+
+                    <!-- Last Error -->
+                    <template x-if="component.lastError">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <p class="text-sm font-semibold text-red-600 mb-1 flex items-center">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                Last Error:
+                            </p>
+                            <p class="text-sm text-red-800 font-mono" x-text="component.lastError"></p>
+                        </div>
+                    </template>
+
+                    <!-- Sub-components -->
+                    <template x-if="component.subComponents && component.subComponents.length > 0">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-600 mb-2">Sub-components:</p>
+                            <div class="space-y-2">
+                                <template x-for="sub in component.subComponents" :key="sub.name">
+                                    <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="text-sm font-medium text-slate-800" x-text="sub.name"></p>
+                                            <template x-if="sub.healthy">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    <i class="fas fa-check-circle mr-1"></i>
+                                                    OK
+                                                </span>
+                                            </template>
+                                            <template x-if="!sub.healthy">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    <i class="fas fa-times-circle mr-1"></i>
+                                                    Error
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <template x-if="sub.status">
+                                            <p class="text-xs text-slate-600" x-text="'Status: ' + sub.status"></p>
+                                        </template>
+                                        <template x-if="sub.lastError">
+                                            <p class="text-xs text-red-600 mt-1" x-text="'Error: ' + sub.lastError"></p>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="filteredComponents.length === 0">
+        <div class="bg-white rounded-xl shadow-md p-12 border border-slate-200 text-center">
+            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+            </div>
+            <p class="text-slate-600 font-medium">No components found</p>
+            <p class="text-slate-400 text-sm mt-1">This agent has no health data available</p>
+        </div>
+    </template>
+
+</main>
+
+<script>
+    // Component health data from Go template
+    const componentHealthData = [
+        {{ if .Status.Health }}{{ if .Status.Health.ComponentHealthMap }}
+        {{ range $key, $value := .Status.Health.ComponentHealthMap }}
+        {
+            name: '{{ $key }}',
+            healthy: {{ $value.Healthy }},
+            startTime: {{ $value.StartTimeUnixNano }},
+            lastError: '{{ $value.LastError }}',
+            status: '{{ $value.Status }}',
+            subComponents: [
+                {{ if $value.ComponentHealthMap }}
+                {{ range $subKey, $subValue := $value.ComponentHealthMap }}
+                {
+                    name: '{{ $subKey }}',
+                    healthy: {{ $subValue.Healthy }},
+                    status: '{{ $subValue.Status }}',
+                    lastError: '{{ $subValue.LastError }}'
+                },
+                {{ end }}
+                {{ end }}
+            ]
+        },
+        {{ end }}
+        {{ end }}{{ end }}
+    ];
+
+    const agentData = {
+        instanceId: '{{ .InstanceIdStr }}',
+        healthy: {{ if .Status.Health }}{{ .Status.Health.Healthy }}{{ else }}false{{ end }}
+    };
+</script>
+
+<script>
+    function componentsManager() {
+        return {
+            agentInstanceId: '',
+            overallHealthy: false,
+            components: [],
+            activeTab: 'all',
+            
+            init() {
+                this.agentInstanceId = agentData.instanceId;
+                this.overallHealthy = agentData.healthy;
+                this.components = this.parseComponents(componentHealthData);
+                console.log('Loaded components:', this.components);
+            },
+            
+            parseComponents(data) {
+                if (!Array.isArray(data)) return [];
+                
+                return data.map(comp => {
+                    const type = this.detectComponentType(comp.name);
+                    return {
+                        name: comp.name,
+                        type: type,
+                        healthy: comp.healthy,
+                        startTime: comp.startTime > 0 ? comp.startTime : null,
+                        lastError: comp.lastError || null,
+                        status: comp.status || null,
+                        subComponents: comp.subComponents || []
+                    };
+                });
+            },
+            
+            detectComponentType(name) {
+                const lower = name.toLowerCase();
+                if (lower.includes('processor') || lower.includes('batch') || lower.includes('memory_limiter')) {
+                    return 'processor';
+                } else if (lower.includes('extension') || lower.includes('health_check') || lower.includes('pprof') || lower.includes('zpages')) {
+                    return 'extension';
+                } else if (lower.includes('pipeline') || lower.includes('traces') || lower.includes('metrics') || lower.includes('logs')) {
+                    return 'pipeline';
+                } else if (lower.includes('exporter') || lower.includes('otlp') || lower.includes('prometheus') || lower.includes('jaeger')) {
+                    return 'exporter';
+                }
+                return 'other';
+            },
+            
+            get allComponents() {
+                return this.components;
+            },
+            
+            get filteredComponents() {
+                if (this.activeTab === 'all') {
+                    return this.components;
+                }
+                return this.components.filter(c => c.type === this.activeTab.slice(0, -1)); // Remove 's' from plural
+            },
+            
+            get stats() {
+                return {
+                    processors: this.components.filter(c => c.type === 'processor').length,
+                    extensions: this.components.filter(c => c.type === 'extension').length,
+                    pipelines: this.components.filter(c => c.type === 'pipeline').length,
+                    exporters: this.components.filter(c => c.type === 'exporter').length
+                };
+            },
+            
+            getIcon(type) {
+                const icons = {
+                    processor: 'fas fa-microchip',
+                    extension: 'fas fa-puzzle-piece',
+                    pipeline: 'fas fa-sitemap',
+                    exporter: 'fas fa-upload',
+                    other: 'fas fa-cube'
+                };
+                return icons[type] || icons.other;
+            },
+            
+            getIconBg(type) {
+                const colors = {
+                    processor: 'bg-gradient-to-br from-purple-500 to-purple-600',
+                    extension: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+                    pipeline: 'bg-gradient-to-br from-blue-500 to-blue-600',
+                    exporter: 'bg-gradient-to-br from-green-500 to-green-600',
+                    other: 'bg-gradient-to-br from-slate-500 to-slate-600'
+                };
+                return colors[type] || colors.other;
+            },
+            
+            getHeaderColor(type) {
+                const colors = {
+                    processor: 'bg-purple-50',
+                    extension: 'bg-indigo-50',
+                    pipeline: 'bg-blue-50',
+                    exporter: 'bg-green-50',
+                    other: 'bg-slate-50'
+                };
+                return colors[type] || colors.other;
+            },
+            
+            formatDate(nanoTimestamp) {
+                if (!nanoTimestamp || nanoTimestamp === 0) return 'N/A';
+                const date = new Date(nanoTimestamp / 1000000); // Convert nanoseconds to milliseconds
+                return date.toLocaleString();
+            }
+        };
+    }
+</script>
+
+</body>
+</html>
