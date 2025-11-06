@@ -122,19 +122,21 @@ func renderRoot(w http.ResponseWriter, r *http.Request) {
 func renderRootJSON(w http.ResponseWriter, r *http.Request) {
 	allAgents := data.AllAgents.GetAllAgentsReadonlyClone()
 
-	// Convert agents map to a slice of AgentJSON for cleaner JSON output
-	var agentsJSON []AgentJSON
+	// Convert agents map to a simplified slice for list view
+	var agentsJSON []AgentListJSON
 	for _, agent := range allAgents {
-		agentJSON := AgentJSON{
-			InstanceId:                  uuid.UUID(agent.InstanceId).String(),
-			InstanceIdStr:               agent.InstanceIdStr,
-			Status:                      agent.Status,
-			StartedAt:                   agent.StartedAt,
-			EffectiveConfig:             agent.EffectiveConfig,
-			CustomInstanceConfig:        agent.CustomInstanceConfig,
-			ClientCertSha256Fingerprint: agent.ClientCertSha256Fingerprint,
-			ClientCertOfferError:        agent.ClientCertOfferError,
+		agentJSON := AgentListJSON{
+			InstanceId: uuid.UUID(agent.InstanceId).String(),
+			HostName:   getHostNameFromAgent(agent),
+			OS:         getOSTypeFromAgent(agent),
+			Healthy:    false,
 		}
+
+		// Get health status
+		if agent.Status != nil && agent.Status.Health != nil {
+			agentJSON.Healthy = agent.Status.Health.Healthy
+		}
+
 		agentsJSON = append(agentsJSON, agentJSON)
 	}
 
@@ -189,6 +191,14 @@ type AgentJSON struct {
 	CustomInstanceConfig        string                   `json:"customInstanceConfig"`
 	ClientCertSha256Fingerprint string                   `json:"clientCertSha256Fingerprint"`
 	ClientCertOfferError        string                   `json:"clientCertOfferError"`
+}
+
+// AgentListJSON represents simplified Agent data for list view
+type AgentListJSON struct {
+	InstanceId string `json:"instanceId"`
+	HostName   string `json:"hostName"`
+	OS         string `json:"os"`
+	Healthy    bool   `json:"healthy"`
 }
 
 // ConfigUpdateResponse represents the response for config update operations
