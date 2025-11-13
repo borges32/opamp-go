@@ -8,179 +8,395 @@
     </a>
 </div>
 
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
 <style>
     td {
         padding: 5px
     }
+    .CodeMirror {
+        height: auto;
+        min-height: 400px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+        animation: slideIn 0.3s ease-out;
+    }
+    .notification.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    .notification.error {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+    .notification.hiding {
+        animation: slideOut 0.3s ease-in forwards;
+    }
 </style>
 
-<link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/styles/default.min.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js"></script>
-<script>hljs.highlightAll();</script>
-
-<hr/>
-
-<table>
-    <tr>
-        <td valign="top">
-            <h3>Agent</h3>
-            <table border="1" style="border-collapse: collapse">
-                <tr>
-                    <td>Instance ID:</td><td>{{ .InstanceIdStr }}</td>
-                </tr>
-                {{if .Status.Health }}
-                <tr>
-                    <td>Up:</td><td>{{ .Status.Health.Healthy }}</td>
-                </tr>
-                {{if .Status.Health.LastError }}
-                <tr>
-                    <td></td><td><span style="color:red">{{ .Status.Health.LastError }}</span></td>
-                </tr>
-                {{end}}
+<!-- Agent Info Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Agent Details Card -->
+    <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fas fa-server mr-2 text-blue-600"></i>
+            Agent Information
+        </h3>
+        <div class="space-y-3">
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">Instance ID:</span>
+                <span class="text-slate-800 font-mono text-sm">{{ .InstanceIdStr }}</span>
+            </div>
+            {{if .Status.Health }}
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">Status:</span>
                 {{if .Status.Health.Healthy }}
-                <tr>
-                    <td>Up since:</td><td>{{ .StartedAt }}</td>
-                </tr>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Healthy
+                </span>
+                {{else}}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <i class="fas fa-times-circle mr-1"></i>
+                    Unhealthy
+                </span>
                 {{end}}
-                {{end}}
-            </table>
-        </td>
-        <td valign="top">
-            <h3>Attributes</h3>
-            <table border="1" style="border-collapse: collapse">
-                {{ range .Status.AgentDescription.IdentifyingAttributes }}
-                </tr>
-                <td>{{ .Key }}</td><td>{{ .Value }}</td>
-                </tr>
-                {{ end }}
-                {{ range .Status.AgentDescription.NonIdentifyingAttributes }}
-                </tr>
-                <td>{{ .Key }}</td><td>{{ .Value }}</td>
-                </tr>
-                {{ end }}
-            </table>
-        </td>
-    </tr>
-</table>
-
-<hr/>
-
-<h3>Configuration</h3>
-<table width="100%">
-    <tr>
-        <td valign="top">
-            Current Effective Configuration:<br/>
-            <pre><code class="language-yaml">{{ .EffectiveConfig }}</code></pre>
-        </td>
-        <td valign="top">
-            Additional Configuration:<br/>
-            <form action="/save_config" method="post">
-            <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
-            <textarea cols="40" rows="20" name="config" class="border border-slate-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">{{ .CustomInstanceConfig }}</textarea><br/>
-             {{if .Status.RemoteConfigStatus }}
-                {{if .Status.RemoteConfigStatus.ErrorMessage }}
-                <span style="color:red; display: inline-flex; align-items: center; margin-top: 8px; padding: 8px 12px; background-color: #fee; border-radius: 6px; font-size: 14px;">
-                    <i class="fas fa-exclamation-circle" style="margin-right: 6px;"></i>
-                    Failed: {{ .Status.RemoteConfigStatus.ErrorMessage }}
-                </span><br/>
-                {{end}}
-             {{end}}
-            <button type="submit" class="mt-4 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95">
-                <i class="fas fa-save mr-2"></i>
-                Save and Send to Agent
-            </button>
-            </form>
-        </td>
-    </tr>
-</table>
-
-<hr/>
-
-<h3>Client Certificate</h3>
-
-<table border="1" style="border-collapse: collapse">
-    {{if .ClientCert}}
-    <tr>
-        <td>Subject:</td><td>{{ .ClientCert.Subject }}</td>
-    </tr>
-    <tr>
-        <td>Not Valid Before:</td><td>{{ .ClientCert.NotBefore }}</td>
-    </tr>
-    <tr>
-        <td>Not Valid After:</td><td>{{ .ClientCert.NotAfter }}</td>
-    </tr>
-    <tr>
-        <td>SHA256 Fingerprint:</td><td>{{ .ClientCertSha256Fingerprint }}</td>
-    </tr>
-    {{else}}
-    <tr>
-        <td><span style="color:red">Client did not supply a certificate.</span></td>
-    </tr>
-    {{end}}
-</table>
-
-{{if .ClientCertOfferError }}
-<br/>
-<span style="color:red">Cannot apply offered certificate: {{ .ClientCertOfferError }}</span>
-<br/>
-{{end}}
-
-<br/>
-<form action="/rotate_client_cert" method="post" style="margin-top: 16px;">
-    <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
-    {{if .ClientCert}}
-    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg shadow-md hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
-        <i class="fas fa-sync-alt mr-2"></i>
-        Rotate Client Certificate
-    </button>
-    {{else}}
-    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg shadow-md hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
-        <i class="fas fa-certificate mr-2"></i>
-        Accept and Offer Client Certificate
-    </button>
-    {{end}}
-</form>
-
-<h3>OpAMP Connection Settings</h3>
-
-<br/>
-
-<form action="/opamp_connection_settings" method="post" style="padding: 20px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
-    <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
-    
-    <div style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 600; color: #475569; margin-bottom: 8px;">TLS Minimum Version:</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
-                <input type="radio" name="tls_min" value="TLSv1.0" style="margin-right: 8px; width: 16px; height: 16px;">
-                <span style="color: #334155;">TLSv1.0</span>
-            </label>
-            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
-                <input type="radio" name="tls_min" value="TLSv1.1" style="margin-right: 8px; width: 16px; height: 16px;">
-                <span style="color: #334155;">TLSv1.1</span>
-            </label>
-            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
-                <input type="radio" name="tls_min" value="TLSv1.2" style="margin-right: 8px; width: 16px; height: 16px;">
-                <span style="color: #334155;">TLSv1.2</span>
-            </label>
-            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 6px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e0e7ff'" onmouseout="this.style.backgroundColor='transparent'">
-                <input type="radio" name="tls_min" value="TLSv1.3" style="margin-right: 8px; width: 16px; height: 16px;">
-                <span style="color: #334155;">TLSv1.3</span>
-            </label>
+            </div>
+            {{if .Status.Health.LastError }}
+            <div class="py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600 block mb-1">Last Error:</span>
+                <span class="text-red-600 text-sm">{{ .Status.Health.LastError }}</span>
+            </div>
+            {{end}}
+            {{if .Status.Health.Healthy }}
+            <div class="flex justify-between py-2">
+                <span class="font-semibold text-slate-600">Up Since:</span>
+                <span class="text-slate-800 text-sm">{{ .StartedAt }}</span>
+            </div>
+            {{end}}
+            {{end}}
         </div>
     </div>
 
-    <div style="margin-bottom: 16px;">
-        <label for="proxy_url" style="display: block; font-weight: 600; color: #475569; margin-bottom: 8px;">Proxy URL:</label>
-        <input type="text" id="proxy_url" name="proxy_url" placeholder="http://proxy.example.com:8080" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'"/>
+    <!-- Agent Attributes Card -->
+    <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fas fa-tags mr-2 text-purple-600"></i>
+            Attributes
+        </h3>
+        <div class="space-y-3 max-h-[400px] overflow-y-auto">
+            {{ range .Status.AgentDescription.IdentifyingAttributes }}
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">{{ .Key }}:</span>
+                <span class="text-slate-800 text-sm">{{ .Value }}</span>
+            </div>
+            {{ end }}
+            {{ range .Status.AgentDescription.NonIdentifyingAttributes }}
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">{{ .Key }}:</span>
+                <span class="text-slate-800 text-sm">{{ .Value }}</span>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+<h3>Configuration</h3>
+<div class="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Current Effective Configuration -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-lg font-semibold text-slate-800">
+                    <i class="fas fa-file-code mr-2 text-blue-600"></i>
+                    Current Effective Configuration
+                </h4>
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Read-Only</span>
+            </div>
+            <div id="currentConfigEditor"></div>
+        </div>
+
+        <!-- Editable Configuration -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-lg font-semibold text-slate-800">
+                    <i class="fas fa-edit mr-2 text-green-600"></i>
+                    Additional Configuration
+                </h4>
+                <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Editable</span>
+            </div>
+            <div id="customConfigEditor"></div>
+            
+            {{if .Status.RemoteConfigStatus }}
+                {{if .Status.RemoteConfigStatus.ErrorMessage }}
+                <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                    <i class="fas fa-exclamation-circle text-red-600 mt-1 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-red-800">Configuration Error</p>
+                        <p class="text-sm text-red-600">{{ .Status.RemoteConfigStatus.ErrorMessage }}</p>
+                    </div>
+                </div>
+                {{end}}
+            {{end}}
+
+            <div class="mt-4 flex gap-3">
+                <button id="saveConfigBtn" class="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 active:scale-95">
+                    <i class="fas fa-save mr-2"></i>
+                    Save and Send to Agent
+                </button>
+                <button id="resetConfigBtn" class="inline-flex items-center justify-center px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 transition-all duration-200">
+                    <i class="fas fa-undo mr-2"></i>
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security & Connection Settings -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Client Certificate Card -->
+    <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fas fa-certificate mr-2 text-green-600"></i>
+            Client Certificate
+        </h3>
+        
+        {{if .ClientCert}}
+        <div class="space-y-3 mb-4">
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">Subject:</span>
+                <span class="text-slate-800 text-sm">{{ .ClientCert.Subject }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">Not Valid Before:</span>
+                <span class="text-slate-800 text-sm">{{ .ClientCert.NotBefore }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-slate-100">
+                <span class="font-semibold text-slate-600">Not Valid After:</span>
+                <span class="text-slate-800 text-sm">{{ .ClientCert.NotAfter }}</span>
+            </div>
+            <div class="py-2">
+                <span class="font-semibold text-slate-600 block mb-1">SHA256 Fingerprint:</span>
+                <span class="text-slate-800 text-xs font-mono break-all">{{ .ClientCertSha256Fingerprint }}</span>
+            </div>
+        </div>
+        {{else}}
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+            <p class="text-red-600 text-sm flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Client did not supply a certificate.
+            </p>
+        </div>
+        {{end}}
+
+        {{if .ClientCertOfferError }}
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+            <p class="text-red-600 text-sm">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                Cannot apply offered certificate: {{ .ClientCertOfferError }}
+            </p>
+        </div>
+        {{end}}
+
+        <form action="/rotate_client_cert" method="post">
+            <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
+            {{if .ClientCert}}
+            <button type="submit" class="w-full inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg shadow-md hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Rotate Client Certificate
+            </button>
+            {{else}}
+            <button type="submit" class="w-full inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg shadow-md hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+                <i class="fas fa-certificate mr-2"></i>
+                Accept and Offer Client Certificate
+            </button>
+            {{end}}
+        </form>
     </div>
 
-    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
-        <i class="fas fa-cog mr-2"></i>
-        Set Connection Settings
-    </button>
-</form>
+    <!-- OpAMP Connection Settings Card -->
+    <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fas fa-network-wired mr-2 text-indigo-600"></i>
+            OpAMP Connection Settings
+        </h3>
+        
+        <form action="/opamp_connection_settings" method="post">
+            <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-slate-700 mb-3">TLS Minimum Version:</label>
+                <div class="space-y-2">
+                    <label class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <input type="radio" name="tls_min" value="TLSv1.0" class="w-4 h-4 text-blue-600">
+                        <span class="ml-3 text-sm text-slate-700">TLSv1.0</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <input type="radio" name="tls_min" value="TLSv1.1" class="w-4 h-4 text-blue-600">
+                        <span class="ml-3 text-sm text-slate-700">TLSv1.1</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <input type="radio" name="tls_min" value="TLSv1.2" class="w-4 h-4 text-blue-600">
+                        <span class="ml-3 text-sm text-slate-700">TLSv1.2</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <input type="radio" name="tls_min" value="TLSv1.3" class="w-4 h-4 text-blue-600">
+                        <span class="ml-3 text-sm text-slate-700">TLSv1.3</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="proxy_url" class="block text-sm font-semibold text-slate-700 mb-2">Proxy URL:</label>
+                <input type="text" id="proxy_url" name="proxy_url" placeholder="http://proxy.example.com:8080" 
+                       class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"/>
+            </div>
+
+            <button type="submit" class="w-full inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105">
+                <i class="fas fa-cog mr-2"></i>
+                Set Connection Settings
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Notification Container -->
+<div id="notification" class="notification"></div>
+
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+
+<script>
+    // Initialize CodeMirror editors
+    const currentConfigEditor = CodeMirror(document.getElementById('currentConfigEditor'), {
+        value: `{{ .EffectiveConfig }}`,
+        mode: 'yaml',
+        theme: 'dracula',
+        lineNumbers: true,
+        readOnly: true,
+        lineWrapping: true,
+        viewportMargin: Infinity
+    });
+
+    const customConfigEditor = CodeMirror(document.getElementById('customConfigEditor'), {
+        value: `{{ .CustomInstanceConfig }}`,
+        mode: 'yaml',
+        theme: 'dracula',
+        lineNumbers: true,
+        readOnly: false,
+        lineWrapping: true,
+        viewportMargin: Infinity
+    });
+
+    // Store original config for reset
+    const originalCustomConfig = `{{ .CustomInstanceConfig }}`;
+
+    // Show notification
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        notification.style.display = 'flex';
+        notification.style.alignItems = 'center';
+        notification.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-3" style="font-size: 20px;"></i>
+            <span style="font-weight: 600;">${message}</span>
+        `;
+        
+        setTimeout(() => {
+            notification.classList.add('hiding');
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.classList.remove('hiding');
+            }, 300);
+        }, 3000);
+    }
+
+    // Reset configuration
+    document.getElementById('resetConfigBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset the configuration to the original value?')) {
+            customConfigEditor.setValue(originalCustomConfig);
+            showNotification('Configuration reset to original value', 'success');
+        }
+    });
+
+    // Save configuration
+    document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+        const configValue = customConfigEditor.getValue();
+        const instanceId = '{{ .InstanceIdStr }}';
+        
+        // Disable button during save
+        const saveBtn = document.getElementById('saveConfigBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+        
+        try {
+            const formData = new URLSearchParams();
+            formData.append('instanceid', instanceId);
+            formData.append('config', configValue);
+            
+            const response = await fetch('/save_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
+            
+            if (response.ok) {
+                showNotification('Configuration saved successfully! Page will reload in 30 seconds...', 'success');
+                
+                // Reload page after 30 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 30000);
+            } else {
+                showNotification('Failed to save configuration', 'error');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save and Send to Agent';
+            }
+        } catch (error) {
+            showNotification('Error: ' + error.message, 'error');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save and Send to Agent';
+        }
+    });
+</script>
 
 </body>
 </html>
