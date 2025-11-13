@@ -2,6 +2,7 @@ package uisrv
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -39,8 +40,10 @@ func Start(rootDir string) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", renderRoot)
 	mux.HandleFunc("/agents/json", renderRootJSON)
+	mux.HandleFunc("/agents/csv", renderRootCSV)
 	mux.HandleFunc("/agent", renderAgent)
 	mux.HandleFunc("/agent/json", renderAgentJSON)
+	mux.HandleFunc("/agent/config", renderAgentConfig)
 	mux.HandleFunc("/components", renderComponents)
 	mux.HandleFunc("/save_config", saveCustomConfigForInstance)
 	mux.HandleFunc("/save_config/json", saveCustomConfigForInstanceJSON)
@@ -151,6 +154,46 @@ func renderRootJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func renderRootCSV(w http.ResponseWriter, r *http.Request) {
+	allAgents := data.AllAgents.GetAllAgentsReadonlyClone()
+
+	// Set Content-Type header for CSV response
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=agents.csv")
+
+	// Create CSV writer
+	csvWriter := csv.NewWriter(w)
+	defer csvWriter.Flush()
+
+	// Write CSV header
+	header := []string{"InstanceId", "HostName", "OS", "Healthy"}
+	if err := csvWriter.Write(header); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Printf("Error writing CSV header: %v", err)
+		return
+	}
+
+	// Write agent data rows
+	for _, agent := range allAgents {
+		healthy := "false"
+		if agent.Status != nil && agent.Status.Health != nil && agent.Status.Health.Healthy {
+			healthy = "true"
+		}
+
+		row := []string{
+			uuid.UUID(agent.InstanceId).String(),
+			getHostNameFromAgent(agent),
+			getOSTypeFromAgent(agent),
+			healthy,
+		}
+
+		if err := csvWriter.Write(row); err != nil {
+			logger.Printf("Error writing CSV row: %v", err)
+			return
+		}
+	}
+}
+
 func renderAgent(w http.ResponseWriter, r *http.Request) {
 	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
 	if err != nil {
@@ -241,6 +284,36 @@ func renderAgentJSON(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(agentJSON); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Printf("Error encoding agent to JSON: %v", err)
+		return
+	}
+}
+
+func renderAgentConfig(w http.ResponseWriter, r *http.Request) {
+	uid, err := uuid.Parse(r.URL.Query().Get("instanceid"))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	agent := data.AllAgents.GetAgentReadonlyClone(data.InstanceId(uid))
+	if agent == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Get the effective config
+	effectiveConfig := agent.EffectiveConfig
+	if effectiveConfig == "" {
+		effectiveConfig = "# No configuration available"
+	}
+
+	// Set headers for YAML file download
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Disposition", "attachment; filename=config-"+uuid.UUID(agent.InstanceId).String()+".yaml")
+
+	// Write the config content
+	if _, err := w.Write([]byte(effectiveConfig)); err != nil {
+		logger.Printf("Error writing config file: %v", err)
 		return
 	}
 }
