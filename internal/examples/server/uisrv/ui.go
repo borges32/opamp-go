@@ -41,6 +41,7 @@ func Start(rootDir string) {
 	mux.HandleFunc("/", renderRoot)
 	mux.HandleFunc("/agents/json", renderRootJSON)
 	mux.HandleFunc("/agents/csv", renderRootCSV)
+	mux.HandleFunc("/agents/full", renderAllAgentsFullJSON)
 	mux.HandleFunc("/agent", renderAgent)
 	mux.HandleFunc("/agent/json", renderAgentJSON)
 	mux.HandleFunc("/agent/config", renderAgentConfig)
@@ -191,6 +192,36 @@ func renderRootCSV(w http.ResponseWriter, r *http.Request) {
 			logger.Printf("Error writing CSV row: %v", err)
 			return
 		}
+	}
+}
+
+func renderAllAgentsFullJSON(w http.ResponseWriter, r *http.Request) {
+	allAgents := data.AllAgents.GetAllAgentsReadonlyClone()
+
+	// Convert agents map to a slice with full details
+	var agentsJSON []AgentJSON
+	for _, agent := range allAgents {
+		agentJSON := AgentJSON{
+			InstanceId:                  uuid.UUID(agent.InstanceId).String(),
+			InstanceIdStr:               agent.InstanceIdStr,
+			Status:                      agent.Status,
+			StartedAt:                   agent.StartedAt,
+			EffectiveConfig:             agent.EffectiveConfig,
+			CustomInstanceConfig:        agent.CustomInstanceConfig,
+			ClientCertSha256Fingerprint: agent.ClientCertSha256Fingerprint,
+			ClientCertOfferError:        agent.ClientCertOfferError,
+		}
+		agentsJSON = append(agentsJSON, agentJSON)
+	}
+
+	// Set Content-Type header for JSON response
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode agents to JSON and write to response
+	if err := json.NewEncoder(w).Encode(agentsJSON); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Printf("Error encoding full agents to JSON: %v", err)
+		return
 	}
 }
 
